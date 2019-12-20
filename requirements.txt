@@ -1,3 +1,4 @@
 fastapi==0.45.0
 starlette==0.12.9
 graphql-core==3.0.1
+fire==0.2.1

@@ -1,6 +1,6 @@
 import typing
 
-from graphql import format_error
+from graphql import format_error, GraphQLSchema, graphql
 from starlette import status
 from starlette.applications import Starlette
 from starlette.background import BackgroundTasks
@@ -10,11 +10,13 @@ from starlette.routing import BaseRoute, Route
 from starlette.types import Receive, Scope, Send
 
 from .playground import PLAYGROUND_HTML
-from .schema import Schema
+
+
+# from .schema import Schema
 
 
 class GraphQL(Starlette):
-    def __init__(self, schema: Schema, playground: bool = True, debug: bool = False,
+    def __init__(self, schema: GraphQLSchema, playground: bool = True, debug: bool = False,
                  routes: typing.List[BaseRoute] = None):
         routes = routes or []
         routes.append(Route('/graphql/', GraphQLApp(schema, playground=playground)))
@@ -24,7 +26,7 @@ class GraphQL(Starlette):
 class GraphQLApp:
     def __init__(
             self,
-            schema: Schema,
+            schema: GraphQLSchema,
             playground: bool = True
     ) -> None:
         self.schema = schema
@@ -81,7 +83,8 @@ class GraphQLApp:
         background = BackgroundTasks()
         context = {"request": request, "background": background}
 
-        result = await self.schema.asyne_execute(
+        result = await graphql(
+            self.schema,
             query,
             variable_values=variables,
             operation_name=operation_name,

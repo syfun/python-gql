@@ -1,5 +1,12 @@
 import re
 
+from graphql import parse
+
+
+def gql(value: str) -> str:
+    parse(value)
+    return value
+
 
 # Adapted from this response in Stackoverflow
 # http://stackoverflow.com/a/19053800/1072990
@@ -8,6 +15,18 @@ def to_camel_case(snake_str):
     # We capitalize the first letter of each component except the first one
     # with the 'capitalize' method and join them together.
     return components[0] + "".join(x.capitalize() if x else "_" for x in components[1:])
+
+
+def recursive_to_camel_case(d):
+    if isinstance(d, list):
+        return [recursive_to_camel_case(v) for v in d]
+    if not isinstance(d, dict):
+        return d
+
+    _d = {}
+    for k, v in d.items():
+        _d[to_camel_case(k)] = recursive_to_camel_case(v)
+    return _d
 
 
 # From this response in Stackoverflow
