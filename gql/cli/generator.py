@@ -1,36 +1,31 @@
-from typing import cast, List
+from typing import List, cast
 
 from graphql import (
-    GraphQLType,
-    is_non_null_type,
-    is_list_type,
-    is_interface_type,
-    GraphQLWrappingType,
-    is_wrapping_type,
-    get_named_type,
-    is_leaf_type,
-    TypeDefinitionNode,
-    GraphQLNamedType,
-    GraphQLField,
-    GraphQLInterfaceType,
-    GraphQLObjectType,
     GraphQLEnumType,
-    GraphQLInputObjectType,
+    GraphQLField,
     GraphQLInputField,
+    GraphQLInputObjectType,
+    GraphQLInterfaceType,
+    GraphQLNamedType,
+    GraphQLObjectType,
+    GraphQLType,
+    GraphQLWrappingType,
+    TypeDefinitionNode,
+    get_named_type,
+    is_interface_type,
+    is_leaf_type,
+    is_list_type,
+    is_non_null_type,
+    is_wrapping_type,
 )
 from graphql.language.parser import SourceType, parse
 from graphql.type.schema import TypeMap
 from graphql.utilities.build_ast_schema import ASTDefinitionBuilder
 from graphql.validation.validate import assert_valid_sdl
 
-from gql.utils.str_converters import to_snake_case
+from gql.utils import to_snake_case
 
-SCALAR_MAP = {
-    'String': 'typing.Text',
-    'Int': 'int',
-    'Float': 'float',
-    'Boolean': 'bool'
-}
+SCALAR_MAP = {'String': 'typing.Text', 'Int': 'int', 'Float': 'float', 'Boolean': 'bool'}
 
 
 def get_type_literal(type_: GraphQLType) -> str:
@@ -67,7 +62,10 @@ def get_field_def(name: str, field: GraphQLField):
     return_type = get_type_literal(field.type)
     args_value = ': '
     if field.args:
-        args = [f'{to_snake_case(arg_name)}: {get_type_literal(arg.type)}' for arg_name, arg in field.args.items()]
+        args = [
+            f'{to_snake_case(arg_name)}: {get_type_literal(arg.type)}'
+            for arg_name, arg in field.args.items()
+        ]
         args_value = '(parent, info, ' + ', '.join(args) + ') -> '
 
     return f'{to_snake_case(name)}{args_value}{return_type}'

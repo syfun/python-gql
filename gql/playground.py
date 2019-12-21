@@ -1,3 +1,4 @@
+# flake8: noqa
 PLAYGROUND_HTML = """
 <!DOCTYPE html>
 
