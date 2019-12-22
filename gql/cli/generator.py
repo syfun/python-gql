@@ -1,4 +1,4 @@
-from typing import List, cast
+from typing import Dict, List, Union, cast
 
 from graphql import (
     GraphQLEnumType,
@@ -10,6 +10,7 @@ from graphql import (
     GraphQLObjectType,
     GraphQLType,
     GraphQLWrappingType,
+    Source,
     TypeDefinitionNode,
     get_named_type,
     is_interface_type,
@@ -17,13 +18,15 @@ from graphql import (
     is_list_type,
     is_non_null_type,
     is_wrapping_type,
+    parse,
 )
-from graphql.language.parser import SourceType, parse
-from graphql.type.schema import TypeMap
 from graphql.utilities.build_ast_schema import ASTDefinitionBuilder
 from graphql.validation.validate import assert_valid_sdl
 
 from gql.utils import to_snake_case
+
+TypeMap = Dict[str, GraphQLNamedType]
+SourceType = Union[Source, str]
 
 SCALAR_MAP = {'String': 'typing.Text', 'Int': 'int', 'Float': 'float', 'Boolean': 'bool'}
 
@@ -58,24 +61,6 @@ def get_type_literal(type_: GraphQLType) -> str:
     return value
 
 
-def get_field_def(name: str, field: GraphQLField):
-    return_type = get_type_literal(field.type)
-    args_value = ': '
-    if field.args:
-        args = [
-            f'{to_snake_case(arg_name)}: {get_type_literal(arg.type)}'
-            for arg_name, arg in field.args.items()
-        ]
-        args_value = '(parent, info, ' + ', '.join(args) + ') -> '
-
-    return f'{to_snake_case(name)}{args_value}{return_type}'
-
-
-def get_input_field_def(name: str, field: GraphQLInputField):
-    return_type = get_type_literal(field.type)
-    return f'{to_snake_case(name)}: {return_type}'
-
-
 def get_type_map(source: SourceType) -> TypeMap:
     document_ast = parse(source)
     assert_valid_sdl(document_ast)
@@ -95,35 +80,97 @@ def get_type_map(source: SourceType) -> TypeMap:
     return type_map
 
 
-def get_interface_def(type_: GraphQLInterfaceType):
-    def_ = f'\nclass {type_.name}:\n'
-    for name, field in type_.fields.items():
-        def_ += f'    {get_field_def(name, field)}\n'
-    return def_
+class FieldGenerator:
+    @staticmethod
+    def output_field(name: str, field: GraphQLField):
+        return_type = get_type_literal(field.type)
+        args_value = ': '
+        if field.args:
+            args = [
+                f'{to_snake_case(arg_name)}: {get_type_literal(arg.type)}'
+                for arg_name, arg in field.args.items()
+            ]
+            args_value = '(parent, info, ' + ', '.join(args) + ') -> '
+
+        return f'{to_snake_case(name)}{args_value}{return_type}'
+
+    @staticmethod
+    def input_field(name: str, field: GraphQLInputField):
+        return_type = get_type_literal(field.type)
+        return f'{to_snake_case(name)}: {return_type}'
 
 
-def get_object_def(type_: GraphQLObjectType):
-    def_ = f'\nclass {type_.name}'
-    if type_.interfaces:
-        interfaces = ', '.join([i.name for i in type_.interfaces])
-        def_ += f'({interfaces})'
-    def_ += ':\n'
-    for name, field in type_.fields.items():
-        def_ += f'    {get_field_def(name, field)}\n'
-    return def_
+class TypeGenerator:
+    """
+    kind show type kine, may be none, dataclass or pydantic.
+    Example:
+        none:
+            class Person:
+                name: typing.Text
+                age: int
+        dataclass:
+            from dataclasses import dataclass
 
+            @dataclass
+            class Person:
+                name: typing.Text
+                age: int
 
-def get_input_def(type_: GraphQLInputObjectType):
-    def_ = f'\nclass {type_.name}:\n'
-    for name, field in type_.fields.items():
-        def_ += f'    {get_input_field_def(name, field)}\n'
-    return def_
+        pydantic:
+            from pydantic import BaseModel
 
+            class Person(BaseModel):
+                name: typing.Text
+                age: int
+    """
 
-def get_enum_def(type_: GraphQLEnumType):
-    def_ = f'\nclass {type_.name}(Enum):\n'
-    i = 1
-    for key in type_.values.keys():
-        def_ += f'   {key} = {i}\n'
-        i += 1
-    return def_
+    def __init__(self, kind: str = 'none'):
+        # TODO: exception
+        assert kind in ['none', 'dataclass', 'pydantic']
+        self.kind = kind
+
+    def interface_type(self, type_: GraphQLInterfaceType):
+        def_ = f'\nclass {type_.name}'
+        if self.kind == 'dataclass':
+            def_ = '@dataclass' + def_
+        elif self.kind == 'pydantic':
+            def_ += '(BaseModel)'
+        def_ += ':\n'
+
+        for name, field in type_.fields.items():
+            def_ += f'    {FieldGenerator.output_field(name, field)}\n'
+        return def_
+
+    def object_type(self, type_: GraphQLObjectType):
+        def_ = f'\nclass {type_.name}'
+        if self.kind == 'dataclass':
+            def_ = '@dataclass' + def_
+
+        if type_.interfaces:
+            interfaces = ', '.join([i.name for i in type_.interfaces])
+            def_ += f'({interfaces})'
+        def_ += ':\n'
+        for name, field in type_.fields.items():
+            def_ += f'    {FieldGenerator.output_field(name, field)}\n'
+        return def_
+
+    def input_type(self, type_: GraphQLInputObjectType):
+        def_ = f'\nclass {type_.name}'
+        if self.kind == 'dataclass':
+            def_ = '@dataclass' + def_
+        elif self.kind == 'pydantic':
+            def_ += '(BaseModel)'
+        def_ += ':\n'
+
+        for name, field in type_.fields.items():
+            def_ += f'    {FieldGenerator.input_field(name, field)}\n'
+        return def_
+
+    def enum_type(self, type_: GraphQLEnumType):
+        def_ = f'\nclass {type_.name}(Enum):\n'
+
+        i = 1
+        for key in type_.values.keys():
+            def_ += f'   {key} = {i}\n'
+            i += 1
+        return def_

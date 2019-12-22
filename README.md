@@ -2,7 +2,9 @@
 
 Schema-first python graphql library.
 
-## Usage
+# Usage
+
+## Use asgi
 
 ```python
 # app.py
@@ -27,7 +29,21 @@ Use [uvicorn](https://www.uvicorn.org) to run app.
 
 `uvicorn app:app --reload`
 
-## TODO
+## Use `gqlgen` command.
+
+### generate types
+
+`gqlgen ./schema.graphql types --kind=dataclass`
+
+### generator resolver
+
+`gqlgen ./schema.graphql resolver Query hello`
+
+### help info
+
+For more info about `gqlgen`, please use `gqlgen -h`
+
+# TODO
 
 - [ ] add cli doc
 - [ ] do more about resolver args
