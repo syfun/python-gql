@@ -9,27 +9,42 @@ from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, R
 from starlette.routing import BaseRoute, Route
 from starlette.types import Receive, Scope, Send
 
+from .build_schema import build_schema, build_schema_from_file
 from .playground import PLAYGROUND_HTML
 
 
-# from .schema import Schema
-
-
 class GraphQL(Starlette):
-    def __init__(self, schema: GraphQLSchema, playground: bool = True, debug: bool = False,
-                 routes: typing.List[BaseRoute] = None):
+    def __init__(
+            self,
+            *,
+            type_defs: str = None,
+            schema_file: str = None,
+            playground: bool = True,
+            debug: bool = False,
+            routes: typing.List[BaseRoute] = None
+    ):
         routes = routes or []
-        routes.append(Route('/graphql/', GraphQLApp(schema, playground=playground)))
+        routes.append(Route('/graphql/', GraphQLApp(type_defs=type_defs, schema_file=schema_file,
+                                                    playground=playground)))
         super().__init__(debug=debug, routes=routes)
 
 
 class GraphQLApp:
+    schema: GraphQLSchema
+
     def __init__(
             self,
-            schema: GraphQLSchema,
+            *,
+            type_defs: str = None,
+            schema_file: str = None,
             playground: bool = True
     ) -> None:
-        self.schema = schema
+        if type_defs:
+            self.schema = build_schema(type_defs)
+        elif schema_file:
+            self.schema = build_schema_from_file(schema_file)
+        else:
+            raise Exception('Must provide type def string or file.')
         self.playground = playground
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:

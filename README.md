@@ -6,7 +6,7 @@ Schema-first python graphql library.
 
 ```python
 # app.py
-from gql import GraphQL, resolver, gql, build_schema
+from gql import GraphQL, resolver, gql
 
 type_defs = gql("""
 type Query {
@@ -20,7 +20,7 @@ async def hello(parent, info, name: str) -> str:
     return name
 
 
-app = GraphQL(build_schema(type_defs))
+app = GraphQL(type_defs=type_defs)
 ```
 
 Use [uvicorn](https://www.uvicorn.org) to run app.
