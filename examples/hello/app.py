@@ -1,12 +1,9 @@
 import uvicorn
 
-from gql import GraphQL, resolver
-
-from starlette.config import Config
-from fastapi import FastAPI
+from gql import GraphQL, query
 
 
-@resolver('Query')
+@query
 async def hello(parent, info, name: str) -> str:
     return name
 
@@ -14,4 +11,4 @@ async def hello(parent, info, name: str) -> str:
 app = GraphQL(schema_file='./schema.gql')
 
 if __name__ == '__main__':
-    uvicorn.run(app)
+    uvicorn.run(app, port=8080)

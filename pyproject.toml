@@ -15,6 +15,7 @@ python = "^3.7"
 starlette = "^0.12"
 graphql-core = "^3"
 fire = "^0.2"
+python-multipart = "^0.0.5"
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }

@@ -8,7 +8,7 @@ Schema-first python graphql library.
 
 ```python
 # app.py
-from gql import GraphQL, resolver, gql
+from gql import GraphQL, query, gql
 
 type_defs = gql("""
 type Query {
@@ -17,7 +17,7 @@ type Query {
 """)
 
 
-@resolver('Query')
+@query
 async def hello(parent, info, name: str) -> str:
     return name
 
@@ -43,9 +43,44 @@ Use [uvicorn](https://www.uvicorn.org) to run app.
 
 For more info about `gqlgen`, please use `gqlgen -h`
 
-# TODO
+## Upload File
 
-- [ ] add cli doc
-- [ ] do more about resolver args
-- [ ] database support
-- [ ] authenticate support
+```python
+import uvicorn
+from gql import gql, mutate, GraphQL
+
+type_defs = gql("""
+ scalar Upload
+ 
+ type File {
+    filename: String!
+  }
+
+  type Query {
+    uploads: [File]
+  }
+
+  type Mutation {
+    singleUpload(file: Upload!): File!
+    multiUpload(files: [Upload!]!): [File!]!
+  }
+""")
+
+
+@mutate
+def single_upload(parent, info, file):
+    return file
+
+
+@mutate
+def multi_upload(parent, info, files):
+    return files
+
+
+app = GraphQL(type_defs=type_defs)
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, port=8080)
+
+```

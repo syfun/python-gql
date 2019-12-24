@@ -1,22 +1,28 @@
 from collections import defaultdict
-from functools import wraps
-from inspect import iscoroutine, iscoroutinefunction, isawaitable
+from functools import partial, wraps
+from inspect import isawaitable
 from typing import Dict
 
-from graphql import GraphQLFieldResolver, GraphQLSchema, is_object_type, is_interface_type, assert_object_type, \
-    assert_interface_type
+from graphql import (
+    GraphQLFieldResolver,
+    GraphQLSchema,
+    assert_interface_type,
+    assert_object_type,
+    is_interface_type,
+    is_object_type,
+)
 
-from .utils import to_camel_case, recursive_to_camel_case
+from .utils import recursive_to_camel_case, to_camel_case
 
 FieldResolverMap = Dict[str, Dict[str, GraphQLFieldResolver]]
 
 resolver_map: FieldResolverMap = defaultdict(dict)
 
 
-def resolver(type_name: str, field_name: str = '', to_camel: bool = True):
-    def _resolver(func: GraphQLFieldResolver):
+def resolver(_func, *, type_name: str = '', field_name: str = '', to_camel: bool = True):
+    def wrap(func: GraphQLFieldResolver):
         @wraps(func)
-        async def __resolver(*args, **kwargs):
+        async def _resolver(*args, **kwargs):
             result = func(*args, **kwargs)
             if isawaitable(result):
                 result = await result
@@ -25,10 +31,16 @@ def resolver(type_name: str, field_name: str = '', to_camel: bool = True):
             return result
 
         name = to_camel_case(field_name or func.__name__)
-        resolver_map[type_name][name] = __resolver
-        return __resolver
+        resolver_map[type_name][name] = _resolver
+        return _resolver
 
-    return _resolver
+    if _func is None:
+        return wrap
+    return wrap(_func)
+
+
+mutate = partial(resolver, type_name='Mutation')
+query = partial(resolver, type_name='Query')
 
 
 def register_resolvers(schema: GraphQLSchema):

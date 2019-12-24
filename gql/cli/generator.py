@@ -72,7 +72,7 @@ def get_type_map(source: SourceType) -> TypeMap:
     def resolve_type(type_name: str) -> GraphQLNamedType:
         type_ = type_map.get(type_name)
         if not type_:
-            raise TypeError(f"Type '{type_name}' not found in document.")
+            raise TypeError(f"""Type '{type_name}' not found in document.""")
         return type_
 
     ast_builder = ASTDefinitionBuilder(resolve_type=resolve_type)

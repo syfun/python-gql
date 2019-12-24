@@ -32,8 +32,8 @@ def recursive_to_camel_case(d):
 # From this response in Stackoverflow
 # http://stackoverflow.com/a/1176023/1072990
 def to_snake_case(name):
-    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+    s1 = re.sub(r'(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
 def recursive_to_snake_case(d):
@@ -49,4 +49,55 @@ def recursive_to_snake_case(d):
 
 
 def to_const(string):
-    return re.sub(r"[\W|^]+", "_", string).upper()
+    return re.sub(r'[\W|^]+', '_', string).upper()
+
+
+def add_file_to_operations(operations, file_obj, path):
+    """Handles the recursive algorithm for adding a file to the operations
+    object"""
+    if not path:
+        if operations is not None:
+            raise ValueError('Path in map does not lead to a null value')
+        return file_obj
+    if isinstance(operations, dict):
+        key = path[0]
+        sub_dict = add_file_to_operations(operations[key], file_obj, path[1:])
+        return new_merged_dict(operations, {key: sub_dict})
+    if isinstance(operations, list):
+        index = int(path[0])
+        sub_item = add_file_to_operations(operations[index], file_obj, path[1:])
+        return new_list_with_replaced_item(operations, index, sub_item)
+    raise TypeError('Operations must be a dict or a list of dicts')
+
+
+def new_merged_dict(*dicts):
+    """Merges dictionaries into a new dictionary. Necessary for python2 and
+    python34 since neither have PEP448 implemented."""
+    # Necessary for python2 support
+    output = {}
+    for d in dicts:
+        output.update(d)
+    return output
+
+
+def new_list_with_replaced_item(input_list, index, new_value):
+    """Creates new list with replaced item at specified index"""
+    output = [i for i in input_list]
+    output[index] = new_value
+    return output
+
+
+def place_files_in_operations(operations, files_map, form):
+    """Replaces None placeholders in operations with file objects in the files
+    dictionary, by following the files_map logic as specified within the 'map'
+    request parameter in the multipart request spec"""
+    path_to_key_iter = (
+        (value.split('.'), key) for (key, values) in files_map.items() for value in values
+    )
+    # Since add_files_to_operations returns a new dict/list, first define
+    # output to be operations itself
+    output = operations
+    for path, key in path_to_key_iter:
+        file_obj = form.get(key)
+        output = add_file_to_operations(output, file_obj, path)
+    return output
