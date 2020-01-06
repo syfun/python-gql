@@ -1,3 +1,5 @@
+import asyncio
+
 import uvicorn
 
 from gql import gql, query, subscribe
@@ -30,9 +32,36 @@ def posts(parent, info):
     return [{'author': 'Jack', 'comment': 'Good!'}]
 
 
+class Ticker:
+    def __init__(self, delay, is_stop=False):
+        self.delay = delay
+        self.is_stop = is_stop
+
+    def __aiter__(self):
+        return self
+
+    def stop(self):
+        self.is_stop = True
+
+    async def __anext__(self):
+        if self.is_stop:
+            raise StopAsyncIteration()
+        await asyncio.sleep(self.delay)
+        if self.is_stop:
+            raise StopAsyncIteration()
+        return {'postAdded': {'author': 'Jack', 'comment': 'Good'}}
+
+
+async def ticker(delay, to):
+    """Yield numbers from 0 to `to` every `delay` seconds."""
+    for i in range(to):
+        await asyncio.sleep(delay)
+        yield {'postAdded': {'author': 'Jack', 'comment': 'Good'}}
+
+
 @subscribe
-def post_added(parent, info, *args):
-    return
+async def post_added(parent, info, *args):
+    return Ticker(5)
 
 
 app = GraphQL(type_defs=type_defs)
