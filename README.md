@@ -8,7 +8,8 @@ Schema-first python graphql library.
 
 ```python
 # app.py
-from gql import GraphQL, query, gql
+from gql import query, gql
+from gql.contrib.starlette import GraphQL
 
 type_defs = gql("""
 type Query {
@@ -47,7 +48,8 @@ For more info about `gqlgen`, please use `gqlgen -h`
 
 ```python
 import uvicorn
-from gql import gql, mutate, GraphQL
+from gql import gql, mutate
+from gql.contrib.starlette import GraphQL
 
 type_defs = gql("""
  scalar Upload

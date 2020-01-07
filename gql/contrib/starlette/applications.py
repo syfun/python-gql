@@ -7,13 +7,14 @@ from starlette.applications import Starlette
 from starlette.background import BackgroundTasks
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
-from starlette.routing import BaseRoute, Route
+from starlette.routing import BaseRoute, Route, WebSocketRoute
 from starlette.types import Receive, Scope, Send
 
-from .build_schema import build_schema, build_schema_from_file
-from .playground import PLAYGROUND_HTML
-from .resolver import register_resolvers
-from .utils import place_files_in_operations
+from gql.build_schema import build_schema, build_schema_from_file
+from gql.playground import PLAYGROUND_HTML
+from gql.resolver import register_resolvers
+from gql.utils import place_files_in_operations
+from .subscribe import Subscription
 
 
 class GraphQL(Starlette):
@@ -27,21 +28,6 @@ class GraphQL(Starlette):
         routes: typing.List[BaseRoute] = None
     ):
         routes = routes or []
-        routes.append(
-            Route(
-                '/graphql/',
-                GraphQLApp(type_defs=type_defs, schema_file=schema_file, playground=playground),
-            )
-        )
-        super().__init__(debug=debug, routes=routes)
-
-
-class GraphQLApp:
-    schema: GraphQLSchema
-
-    def __init__(
-        self, *, type_defs: str = None, schema_file: str = None, playground: bool = True
-    ) -> None:
         if type_defs:
             self.schema = build_schema(type_defs)
         elif schema_file:
@@ -49,10 +35,23 @@ class GraphQLApp:
         else:
             raise Exception('Must provide type def string or file.')
         register_resolvers(self.schema)
+
+        routes.extend(
+            [
+                Route('/graphql/', ASGIApp(self.schema, playground=playground)),
+                WebSocketRoute('/graphql/', Subscription(self.schema)),
+            ]
+        )
+        super().__init__(debug=debug, routes=routes)
+
+
+class ASGIApp:
+    def __init__(self, schema: GraphQLSchema, playground: bool = True) -> None:
+        self.schema = schema
         self.playground = playground
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        request = Request(scope, receive=receive)
+        request = Request(scope, receive=receive, send=send)
         response = await self.handle_graphql(request)
         await response(scope, receive, send)
 

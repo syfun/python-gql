@@ -1,6 +1,7 @@
 import uvicorn
 
-from gql import GraphQL, gql, mutate
+from gql import gql, mutate
+from gql.contrib.starlette import GraphQL
 
 type_defs = gql(
     """

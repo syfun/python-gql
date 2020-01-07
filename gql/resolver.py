@@ -41,6 +41,7 @@ def resolver(_func, *, type_name: str = '', field_name: str = '', to_camel: bool
 
 mutate = partial(resolver, type_name='Mutation')
 query = partial(resolver, type_name='Query')
+subscribe = partial(resolver, type_name='Subscription')
 
 
 def register_resolvers(schema: GraphQLSchema):
@@ -57,4 +58,7 @@ def register_resolvers(schema: GraphQLSchema):
             field = type_.fields.get(name)
             if not field:
                 return
-            field.resolve = field_resolver
+            if type_name == 'Subscription':
+                field.subscribe = field_resolver
+            else:
+                field.resolve = field_resolver
