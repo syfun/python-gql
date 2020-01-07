@@ -10,11 +10,11 @@ from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse, R
 from starlette.routing import BaseRoute, Route, WebSocketRoute
 from starlette.types import Receive, Scope, Send
 
-from .build_schema import build_schema, build_schema_from_file
-from .playground import PLAYGROUND_HTML
-from .resolver import register_resolvers
+from gql.build_schema import build_schema, build_schema_from_file
+from gql.playground import PLAYGROUND_HTML
+from gql.resolver import register_resolvers
+from gql.utils import place_files_in_operations
 from .subscribe import Subscription
-from .utils import place_files_in_operations
 
 
 class GraphQL(Starlette):

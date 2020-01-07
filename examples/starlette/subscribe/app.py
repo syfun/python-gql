@@ -3,7 +3,7 @@ import asyncio
 import uvicorn
 
 from gql import gql, query, subscribe
-from gql.asgi import GraphQL
+from gql.contrib.starlette import GraphQL
 
 type_defs = gql(
     """
