@@ -2,7 +2,7 @@
 name = "python-gql"
 version = "0.1.0"
 description = "Python schema-first and auto-generate class graphql server"
-authors = ["syfun <sunyu418@gmail.com>"]
+authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
