@@ -13,7 +13,6 @@ from graphql import (
     Source,
     TypeDefinitionNode,
     get_named_type,
-    is_interface_type,
     is_leaf_type,
     is_list_type,
     is_non_null_type,
@@ -28,16 +27,16 @@ from gql.utils import to_snake_case
 TypeMap = Dict[str, GraphQLNamedType]
 SourceType = Union[Source, str]
 
-SCALAR_MAP = {'String': 'typing.Text', 'Int': 'int', 'Float': 'float', 'Boolean': 'bool'}
+SCALAR_MAP = {'String': 'Text', 'Int': 'int', 'Float': 'float', 'Boolean': 'bool'}
 
 
 def get_type_literal(type_: GraphQLType) -> str:
     """
-    String! => typing.Text
-    String => typing.Optional[typing.Text]
+    String! => Text
+    String => Optional[Text]
     [Character!]! => ['Character']
-    [Character!] => typing.Optional['Character']
-    [Character] => typing.Optional[typing.List[typing.Optional['Character']]]
+    [Character!] => Optional['Character']
+    [Character] => Optional[List[Optional['Character']]]
     """
     is_null = False
     if is_non_null_type(type_):
@@ -49,14 +48,15 @@ def get_type_literal(type_: GraphQLType) -> str:
         type_ = cast(GraphQLWrappingType, type_)
         value = get_type_literal(type_.of_type)
         if is_list_type(type_):
-            value = f'typing.List[{value}]'
+            value = f'List[{value}]'
     else:
         type_ = get_named_type(type_)
         value = SCALAR_MAP.get(type_.name) or type_.name
-        value = value if is_leaf_type(type_) or is_interface_type(type_) else f"'{value}'"
+        value = value if is_leaf_type(type_) else f"'{value}'"
+        # value = value if is_leaf_type(type_) or is_interface_type(type_) else f"'{value}'"
 
     if is_null:
-        value = f'typing.Optional[{value}]'
+        value = f'Optional[{value}]'
 
     return value
 
@@ -97,7 +97,7 @@ class FieldGenerator:
     @staticmethod
     def input_field(name: str, field: GraphQLInputField):
         return_type = get_type_literal(field.type)
-        return f'{to_snake_case(name)}: {return_type}'
+        return f"{to_snake_case(name)}: {return_type}"
 
 
 class TypeGenerator:
@@ -106,21 +106,21 @@ class TypeGenerator:
     Example:
         none:
             class Person:
-                name: typing.Text
+                name: Text
                 age: int
         dataclass:
             from dataclasses import dataclass
 
             @dataclass
             class Person:
-                name: typing.Text
+                name: Text
                 age: int
 
         pydantic:
             from pydantic import BaseModel
 
             class Person(BaseModel):
-                name: typing.Text
+                name: Text
                 age: int
     """
 
@@ -167,7 +167,7 @@ class TypeGenerator:
         return def_
 
     def enum_type(self, type_: GraphQLEnumType):
-        def_ = f'\nclass {type_.name}(Enum):\n'
+        def_ = f'\n@enum_resolver\nclass {type_.name}(Enum):\n'
 
         i = 1
         for key in type_.values.keys():

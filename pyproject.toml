@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "python-gql"
-version = "0.0.1"
+version = "0.0.2"
 description = "Python schema-first and auto-generate class graphql server"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
