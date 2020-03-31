@@ -12,7 +12,6 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-starlette = "^0.13"
 graphql-core = "^3"
 fire = "^0.2"
 python-multipart = "^0.0.5"
@@ -22,7 +21,6 @@ black = { version = "*", allow-prereleases = true }
 isort = "*"
 flake8 = "*"
 pre-commit = "*"
-uvicorn = "*"
 
 [tool.poetry.scripts]
 gqlgen = 'gql.cli.main:main'
