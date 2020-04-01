@@ -2,7 +2,9 @@ from typing import Union
 
 import graphql
 
+from .enum import register_enums
 from .resolver import register_resolvers
+from .scalar import register_scalars
 
 
 def build_schema(
@@ -16,6 +18,8 @@ def build_schema(
         source, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
     )
     register_resolvers(schema)
+    register_enums(schema)
+    register_scalars(schema)
     return schema
 
 

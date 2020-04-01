@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "python-gql"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python schema-first and auto-generate class graphql server"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
@@ -13,8 +13,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 graphql-core = "^3"
-fire = "^0.2"
-python-multipart = "^0.0.5"
+click = "^7"
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }

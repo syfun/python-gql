@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Dict, List, Union, cast
 
 from graphql import (
@@ -12,13 +13,19 @@ from graphql import (
     GraphQLWrappingType,
     Source,
     TypeDefinitionNode,
+    assert_object_type,
+    assert_union_type,
     get_named_type,
+    is_interface_type,
     is_leaf_type,
     is_list_type,
     is_non_null_type,
+    is_object_type,
+    is_union_type,
     is_wrapping_type,
     parse,
 )
+from graphql.pyutils.cached_property import cached_property
 from graphql.utilities.build_ast_schema import ASTDefinitionBuilder
 from graphql.validation.validate import assert_valid_sdl
 
@@ -80,7 +87,60 @@ def get_type_map(source: SourceType) -> TypeMap:
     return type_map
 
 
+class TypeResolverGenerator:
+    type_map: TypeMap
+
+    def __init__(self, type_map: TypeMap):
+        self.type_map = type_map
+
+    @cached_property
+    def type_resolver_map(self) -> Dict[str, List[str]]:
+        _map = defaultdict(list)
+        for name, type_ in self.type_map.items():
+            if is_interface_type(type_) and name not in _map:
+                _map[name] = []
+            elif is_object_type(type_):
+                type_ = assert_object_type(type_)
+                for interface in type_.interfaces:
+                    _map[interface.name].append(name)
+            elif is_union_type(type_):
+                type_ = assert_union_type(type_)
+                _map[name] = [t.name for t in type_.types]
+
+        return _map
+
+    def type_resolver(self, type_name: str) -> str:
+        if type_name not in self.type_resolver_map:
+            print(f"No '{type_name}' type.")
+            return ''
+
+        def_ = f"""
+@type_resolver('{type_name}')
+def resolve_{to_snake_case(type_name)}_type(obj, info, type_):\n"""
+        for name in self.type_resolver_map[type_name]:
+            def_ += f"    if isinstance(obj, {name}):\n\t return '{name}'\n"
+        def_ += '    return None\n'
+        return def_
+
+    def all_type_resolvers(self) -> List[str]:
+        return [self.type_resolver(type_name) for type_name in self.type_resolver_map]
+
+
 class FieldGenerator:
+    @staticmethod
+    def resolver_field(name: str, field: GraphQLField):
+        return_type = get_type_literal(field.type)
+        if field.args:
+            args = [
+                f'{to_snake_case(arg_name)}: {get_type_literal(arg.type)}'
+                for arg_name, arg in field.args.items()
+            ]
+            args_value = '(parent, info, ' + ', '.join(args) + ') -> '
+        else:
+            args_value = '(parent, info) -> '
+
+        return f'{to_snake_case(name)}{args_value}{return_type}'
+
     @staticmethod
     def output_field(name: str, field: GraphQLField):
         return_type = get_type_literal(field.type)
