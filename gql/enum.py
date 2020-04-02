@@ -27,7 +27,7 @@ def enum_type(_cls):
 
 def register_enums(schema: GraphQLSchema):
     for type_name, type_ in schema.type_map.items():
-        if not is_enum_type(type_):
+        if not is_enum_type(type_) or type_name.startswith('__'):
             continue
 
         type_ = assert_enum_type(type_)
