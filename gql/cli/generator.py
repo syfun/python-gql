@@ -227,7 +227,7 @@ class TypeGenerator:
         return def_
 
     def enum_type(self, type_: GraphQLEnumType):
-        def_ = f'\n@enum_resolver\nclass {type_.name}(Enum):\n'
+        def_ = f'\n@enum_type\nclass {type_.name}(Enum):\n'
 
         i = 1
         for key in type_.values.keys():

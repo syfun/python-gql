@@ -124,7 +124,7 @@ def all(file: str, kind: str):
     if enum_types:
         imports += 'from enum import Enum\n'
     imports += 'from typing import Any, Dict, List, Optional, Text, Union\n\n'
-    imports += 'from gql import enum_resolver, type_resolver\n'
+    imports += 'from gql import enum_type, type_resolver\n'
     if kind == 'pydantic':
         imports += 'from pydantic import BaseModel\n'
     imports += '\n'
