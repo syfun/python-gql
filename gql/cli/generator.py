@@ -209,6 +209,8 @@ class TypeGenerator:
         if type_.interfaces:
             interfaces = ', '.join([i.name for i in type_.interfaces])
             def_ += f'({interfaces})'
+        elif self.kind == 'pydantic':
+            def_ = def_ + '(BaseModel)'
         def_ += ':\n'
         for name, field in type_.fields.items():
             def_ += f'    {FieldGenerator.output_field(name, field)}\n'

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "python-gql"
-version = "0.0.5"
+version = "0.0.6"
 description = "Python schema-first and auto-generate class graphql server"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
@@ -20,6 +20,8 @@ black = { version = "*", allow-prereleases = true }
 isort = "*"
 flake8 = "*"
 pre-commit = "*"
+
+
 
 [tool.poetry.scripts]
 gqlgen = 'gql.cli.main:main'

@@ -20,8 +20,20 @@ from .generator import FieldGenerator, TypeGenerator, TypeResolverGenerator, get
 
 
 @click.group()
-def main():
-    pass
+@click.option('-f', '--file', help='graphql sdl file, file extension may be .gql or .graphql')
+@click.pass_context
+def main(ctx, file):
+    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
+    # by means other than the `if` block below)
+    ctx.ensure_object(dict)
+
+    if not file:
+        file = guess_schema_file()
+    if not file:
+        print("Must has 'file' argument or has a graphql sdl file which endswith .gql or .graphql.")
+        return
+    with open(file, 'r') as f:
+        ctx.obj['type_defs'] = f.read()
 
 
 def guess_schema_file():
@@ -35,25 +47,17 @@ def guess_schema_file():
 
 
 @main.command()
-@click.option('--file', help='graphql sdl file, file extension may be .gql or .graphql')
-@click.option('--kind', default='none', help='generate class based: none, dataclass, pydantic')
+@click.pass_context
+@click.option(
+    '--kind',
+    default='pydantic',
+    help='generate class based: none, dataclass, pydantic, default is pydantic',
+)
 @click.argument('typ')
-def type(typ: str, file: str, kind: str):
+def type(ctx, typ: str, kind: str):
     """Generate one type"""
-    if kind not in ['none', 'dataclass', 'pydantic']:
-        print('KIND must be none, dataclass or pydantic')
-        return
-
-    if not file:
-        file = guess_schema_file()
-    if not file:
-        print("Must has 'file' argument or has a graphql sdl file which endswith .gql or .graphql.")
-        return
-    with open(file, 'r') as f:
-        type_defs = f.read()
-
     generator = TypeGenerator(kind)
-    type_map = get_type_map(type_defs)
+    type_map = get_type_map(ctx.obj['type_defs'])
     if typ not in type_map:
         print(f"No '{typ}' type.")
         return
@@ -73,26 +77,22 @@ def type(typ: str, file: str, kind: str):
 
 
 @main.command()
-@click.option('--file', help='graphql sdl file, file extension may be .gql or .graphql')
-@click.option('--kind', default='none', help='generate class based: none, dataclass, pydantic')
-def all(file: str, kind: str):
+@click.pass_context
+@click.option(
+    '--kind',
+    default='pydantic',
+    help='generate class based: none, dataclass, pydantic, default is pydantic',
+)
+def all(ctx, kind: str):
     """Generate all schema types"""
     if kind not in ['none', 'dataclass', 'pydantic']:
         print('KIND must be none, dataclass or pydantic')
         return
 
-    if not file:
-        file = guess_schema_file()
-    if not file:
-        print("Must has 'file' argument or has a graphql sdl file which endswith .gql or .graphql.")
-        return
-    with open(file, 'r') as f:
-        type_defs = f.read()
-
     generator = TypeGenerator(kind)
 
     enum_types, interface_types, object_types, input_types = [], [], [], []
-    type_map = get_type_map(type_defs)
+    type_map = get_type_map(ctx.obj['type_defs'])
     for name, type_ in type_map.items():
         if name in ['Query', 'Mutation']:
             continue
@@ -108,6 +108,7 @@ def all(file: str, kind: str):
     type_resolvers = TypeResolverGenerator(type_map).all_type_resolvers()
     imports, body = '', ''
 
+    body += "ID = NewType('ID', Text)\n\n"
     if enum_types:
         body += '\n'.join(enum_types) + '\n'
     if interface_types:
@@ -123,7 +124,7 @@ def all(file: str, kind: str):
         imports += 'from dataclasses import dataclass\n'
     if enum_types:
         imports += 'from enum import Enum\n'
-    imports += 'from typing import Any, Dict, List, Optional, Text, Union\n\n'
+    imports += 'from typing import Any, Dict, List, NewType, Optional, Text, Union\n\n'
     imports += 'from gql import enum_type, type_resolver\n'
     if kind == 'pydantic':
         imports += 'from pydantic import BaseModel\n'
@@ -133,20 +134,12 @@ def all(file: str, kind: str):
 
 
 @main.command()
-@click.option('--file', help='graphql sdl file, file extension may be .gql or .graphql')
+@click.pass_context
 @click.argument('type')
 @click.argument('field')
-def field_resolver(type: str, field: str, file: str):
+def field_resolver(ctx, type: str, field: str):
     """Generate field resolver."""
-    if not file:
-        file = guess_schema_file()
-    if not file:
-        print("Must has 'file' argument or has a graphql sdl file which endswith .gql or .graphql.")
-        return
-    with open(file, 'r') as f:
-        type_defs = f.read()
-
-    schema = build_schema(type_defs)
+    schema = build_schema(ctx.obj['type_defs'])
     type_ = schema.get_type(type)
     if is_object_type(type_):
         type_ = assert_object_type(type_)
@@ -174,17 +167,9 @@ def field_resolver(type: str, field: str, file: str):
 
 
 @main.command()
-@click.option('--file', help='graphql sdl file, file extension may be .gql or .graphql')
+@click.pass_context
 @click.argument('type_name')
-def type_resolver(type_name: str, file: str):
+def type_resolver(ctx, type_name: str):
     """Generate all schema types"""
-    if not file:
-        file = guess_schema_file()
-    if not file:
-        print("Must has 'file' argument or has a graphql sdl file which endswith .gql or .graphql.")
-        return
-    with open(file, 'r') as f:
-        type_defs = f.read()
-
-    generator = TypeResolverGenerator(get_type_map(type_defs))
+    generator = TypeResolverGenerator(get_type_map(ctx.obj['type_defs']))
     print(generator.type_resolver(type_name))
