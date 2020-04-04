@@ -1,7 +1,7 @@
 from collections import defaultdict
 from functools import partial, wraps
 from inspect import isawaitable, iscoroutinefunction, isfunction
-from typing import Dict, Union
+from typing import Dict, Mapping, Union
 
 from graphql import (
     GraphQLFieldResolver,
@@ -55,7 +55,7 @@ def field_resolver(
         if isinstance(func_or_field, str):
             name = to_camel_case(func_or_field or func.__name__)
         else:
-            name = func.__name__
+            name = to_camel_case(func.__name__)
 
         if iscoroutinefunction(func):
             field_resolver_map[type_name][name] = async_resolver
@@ -110,3 +110,24 @@ def register_field_resolvers(schema: GraphQLSchema):
 def register_resolvers(schema: GraphQLSchema):
     register_field_resolvers(schema)
     register_type_resolvers(schema)
+
+
+def default_field_resolver(source, info, **args):
+    """Default field resolver.
+
+    If a resolve function is not given, then a default resolve behavior is used which
+    takes the property of the source object of the same name as the field and returns
+    it as the result, or if it's a function, returns the result of calling that function
+    while passing along args and context.
+
+    For dictionaries, the field names are used as keys, for all other objects they are
+    used as attribute names.
+    """
+    # Ensure source is a value for which property access is acceptable.
+    field_name = info.field_name
+    value = (
+        source.get(field_name) if isinstance(source, Mapping) else getattr(source, field_name, None)
+    )
+    if callable(value):
+        return value(info, **args)
+    return value

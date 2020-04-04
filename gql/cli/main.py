@@ -1,5 +1,5 @@
 import os
-from typing import cast
+from typing import List, Text, Tuple, cast
 
 import click
 from graphql import (
@@ -7,6 +7,7 @@ from graphql import (
     GraphQLInputObjectType,
     GraphQLInterfaceType,
     GraphQLObjectType,
+    GraphQLOutputType,
     assert_interface_type,
     assert_object_type,
     build_schema,
@@ -14,6 +15,8 @@ from graphql import (
     is_input_object_type,
     is_interface_type,
     is_object_type,
+    is_scalar_type,
+    print_type,
 )
 
 from .generator import FieldGenerator, TypeGenerator, TypeResolverGenerator, get_type_map
@@ -173,3 +176,81 @@ def type_resolver(ctx, type_name: str):
     """Generate all schema types"""
     generator = TypeResolverGenerator(get_type_map(ctx.obj['type_defs']))
     print(generator.type_resolver(type_name))
+
+
+def print_args(args) -> Tuple[list, list]:
+    var_defs, vars = [], []
+    for name, argument in args.items():
+        var_defs.append(f'${name}: {argument.type}')
+        vars.append(f'{name}: ${name}')
+    return var_defs, vars
+
+
+def of_type(type_: GraphQLOutputType) -> GraphQLOutputType:
+    try:
+        t = type_.of_type
+    except AttributeError:
+        return type_
+    else:
+        return of_type(t)
+
+
+def print_block(items: List[Text], indent=0) -> Text:
+    return ' {\n' + '\n'.join(items) + '\n' + ' ' * indent + '}' if items else ''
+
+
+def print_field(type_: GraphQLObjectType, indent: int = 2) -> str:
+    if is_scalar_type(type_):
+        return ''
+    items = []
+    indent_space = ' ' * indent
+    for name, field in type_.fields.items():
+        item = indent_space + name
+        t = of_type(field.type)
+        if is_object_type(t):
+            item += print_field(t, indent + 2)
+        # elif is_interface_type(t):
+        #     if not inner_type:
+        #         raise RuntimeError(f'{t} is a interface type, must have inner type.')
+        #     item_ = f'{" " * (indent+2)}... on {inner_type.name}{print_field(inner_type, indent+4)}'
+        #     item += print_block([item_], indent)
+        items.append(item)
+    return print_block(items, indent - 2)
+
+
+@main.command()
+@click.pass_context
+@click.argument('op')
+def client(ctx, op: str):
+    """Generate client query"""
+    schema = build_schema(ctx.obj['type_defs'])
+    query = schema.query_type.fields.get(op)
+    op_type = 'query'
+    if not query:
+        query = schema.mutation_type.fields.get(op)
+        op_type = 'mutation'
+        if not query:
+            print(f'No {op} query.')
+            return
+
+    operation_name = op
+    if query.args:
+        var_defs, vars = print_args(query.args)
+        operation_name += f'({", ".join(var_defs)})'
+        op += f'({", ".join(vars)})'
+    return_type = of_type(query.type)
+    fields = '  ' + op + print_field(return_type, indent=4)
+    print(op_type + ' ' + operation_name + print_block([fields]))
+
+
+@main.command()
+@click.pass_context
+@click.argument('type_name')
+def printt(ctx, type_name: str):
+    """Print type definition"""
+    schema = build_schema(ctx.obj['type_defs'])
+    type_ = schema.get_type(type_name)
+    if not type_:
+        print(f'No {type_name} type.')
+        return
+    print(print_type(type_))
