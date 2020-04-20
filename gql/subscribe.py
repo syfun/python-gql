@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict
 
+# https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md
 PROTOCOL = 'graphql-ws'
 
 

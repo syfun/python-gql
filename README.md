@@ -19,3 +19,7 @@ Schema-first python graphql library.
 ### help info
 
 For more info about `gqlgen`, please use `gqlgen -h`
+
+
+TODO:
+- generate all field resolver
