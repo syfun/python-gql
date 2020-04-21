@@ -2,7 +2,7 @@ import asyncio
 from collections import defaultdict
 from typing import Any, Callable, Dict, Tuple
 
-from gql.pubsub_async_iterator import PubSubEngine
+from .pubsub_async_iterator import PubSubEngine
 
 
 class EventEmitter:
