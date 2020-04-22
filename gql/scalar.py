@@ -1,8 +1,17 @@
+import json
 from datetime import datetime, timezone
 from inspect import isclass
+from numbers import Number
 from typing import Any, Dict
 
-from graphql import INVALID, GraphQLSchema, IntValueNode, assert_scalar_type, is_scalar_type
+from graphql import (
+    INVALID,
+    GraphQLSchema,
+    IntValueNode,
+    StringValueNode,
+    assert_scalar_type,
+    is_scalar_type,
+)
 from graphql.pyutils import inspect, is_integer
 
 ScalarTypeMap = Dict[str, Any]
@@ -67,6 +76,11 @@ class Timestamp:
 
     @staticmethod
     def serialize(value: Any) -> int:
+        if isinstance(value, Number):
+            return int(value)
+        if isinstance(value, str) and value.isdigit():
+            return int(value)
+
         if not isinstance(value, datetime):
             raise TypeError(f'Timestamp cannot represent non datetime value: {inspect(value)}')
         return int(value.timestamp() * 1000)
@@ -81,5 +95,27 @@ class Timestamp:
     def parse_literal(ast, _variables=None):
         if isinstance(ast, IntValueNode):
             return datetime.fromtimestamp(int(ast.value) / 1000, tz=timezone.utc)
+
+        return INVALID
+
+
+@scalar_type
+class JSONString:
+    description = "The `JSONString` represents a json string."
+
+    @staticmethod
+    def serialize(value: Any) -> str:
+        return json.dumps(value)
+
+    @staticmethod
+    def parse_value(value: Any) -> dict:
+        if not isinstance(value, str):
+            raise TypeError(f'JSONString cannot represent non string value: {inspect(value)}')
+        return json.loads(value)
+
+    @staticmethod
+    def parse_literal(ast, _variables=None):
+        if isinstance(ast, StringValueNode):
+            return json.loads(ast.value)
 
         return INVALID
