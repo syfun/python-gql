@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 # https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md
 PROTOCOL = 'graphql-ws'
@@ -43,13 +43,14 @@ class OperationMessage:
     type: MessageType
 
     id: str = None
-    payload: OperationMessagePayload = None
+    payload: Union[OperationMessagePayload, dict] = None
 
     @classmethod
     def build(cls, value: dict) -> 'OperationMessage':
         assert value is not None
-        return cls(
-            type=MessageType(value.get('type')),
-            id=value.get('id'),
-            payload=OperationMessagePayload.build(value.get('payload')),
-        )
+        message = cls(type=MessageType(value.get('type')), id=value.get('id'),)
+        payload = value.get('payload')
+        if message.type == MessageType.GQL_START:
+            payload = OperationMessagePayload.build(payload)
+        message.payload = payload
+        return message
