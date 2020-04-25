@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "python-gql"
-version = "0.0.7"
-description = "Python schema-first and auto-generate class graphql server"
+version = "0.0.12"
+description = "Python schema-first GraphQL library based on GraphQL-core"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/syfun/python-gql"
 
 packages = [
     { include = "gql" }
@@ -13,18 +14,12 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.7"
 graphql-core = "^3"
-click = "^7"
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }
 isort = "*"
 flake8 = "*"
 pre-commit = "*"
-
-
-
-[tool.poetry.scripts]
-gqlgen = 'gql.cli.main:main'
 
 [build-system]
 requires = ["poetry>=0.12"]

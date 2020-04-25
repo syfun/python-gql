@@ -13,7 +13,7 @@ def build_schema(
     assume_valid_sdl=False,
     no_location=False,
     experimental_fragment_variables=False,
-):
+) -> graphql.GraphQLSchema:
     schema = graphql.build_schema(
         source, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
     )
