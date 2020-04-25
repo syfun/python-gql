@@ -1,10 +1,11 @@
 [tool.poetry]
 name = "python-gql"
 version = "0.0.12"
-description = "Python schema-first and auto-generate class graphql server"
+description = "Python schema-first GraphQL library based on GraphQL-core"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/syfun/python-gql"
 
 packages = [
     { include = "gql" }
