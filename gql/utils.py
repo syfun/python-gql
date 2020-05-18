@@ -1,5 +1,6 @@
 import re
 from functools import wraps
+from inspect import isawaitable
 from typing import Any, Callable
 
 from graphql import parse
@@ -112,3 +113,10 @@ def place_files_in_operations(operations, files_map, form):
         file_obj = form.get(key)
         output = add_file_to_operations(output, file_obj, path)
     return output
+
+
+async def execute_async_function(func, *args, **kwargs):
+    result = func(*args, **kwargs)
+    if isawaitable(result):
+        result = await result
+    return result

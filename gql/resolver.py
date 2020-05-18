@@ -1,6 +1,8 @@
+import traceback
 from collections import defaultdict
+from enum import Enum
 from functools import partial, wraps
-from inspect import isawaitable, iscoroutinefunction, isfunction
+from inspect import iscoroutinefunction, isfunction
 from typing import Dict, Mapping, Union
 
 from graphql import (
@@ -15,7 +17,7 @@ from graphql import (
     is_union_type,
 )
 
-from .utils import recursive_to_camel_case, to_camel_case
+from .utils import execute_async_function, to_camel_case, to_snake_case
 
 FieldResolverMap = Dict[str, Dict[str, GraphQLFieldResolver]]
 TypeResolverMap = Dict[str, GraphQLTypeResolver]
@@ -33,24 +35,32 @@ def type_resolver(type_name: str):
 
 
 def field_resolver(
-    type_name: str, func_or_field: Union[GraphQLFieldResolver, str] = None, to_camel: bool = True
+    type_name: str, func_or_field: Union[GraphQLFieldResolver, str] = None, print_exc: bool = True
 ):
     def wrap(func: GraphQLFieldResolver):
         @wraps(func)
         def _resolver(*args, **kwargs):
-            result = func(*args, **kwargs)
-            if to_camel:
-                result = recursive_to_camel_case(result)
-            return result
+            kwargs = {to_snake_case(k): v for k, v in kwargs.items()}
+            if not print_exc:
+                return func(*args, **kwargs)
+
+            try:
+                return func(*args, **kwargs)
+            except Exception as exc:
+                traceback.print_exc()
+                raise exc
 
         @wraps(func)
         async def async_resolver(*args, **kwargs):
-            result = func(*args, **kwargs)
-            if isawaitable(result):
-                result = await result
-            if to_camel:
-                result = recursive_to_camel_case(result)
-            return result
+            kwargs = {to_snake_case(k): v for k, v in kwargs.items()}
+            if not print_exc:
+                return await execute_async_function(func, *args, **kwargs)
+
+            try:
+                return await execute_async_function(func, *args, **kwargs)
+            except Exception as exc:
+                traceback.print_exc()
+                raise exc
 
         if isinstance(func_or_field, str):
             name = to_camel_case(func_or_field or func.__name__)
@@ -124,10 +134,12 @@ def default_field_resolver(source, info, **args):
     used as attribute names.
     """
     # Ensure source is a value for which property access is acceptable.
-    field_name = info.field_name
+    field_name = to_snake_case(info.field_name)
     value = (
         source.get(field_name) if isinstance(source, Mapping) else getattr(source, field_name, None)
     )
     if callable(value):
         return value(info, **args)
+    if isinstance(value, Enum):
+        return value.value
     return value
