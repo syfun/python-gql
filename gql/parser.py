@@ -3,6 +3,8 @@ from typing import Dict, List, Optional, Set, Union
 
 import graphql
 
+from .utils import to_snake_case
+
 GraphQLNode = Union[graphql.FieldNode, graphql.FragmentDefinitionNode]
 
 
@@ -64,18 +66,18 @@ def parse_node(node: GraphQLNode, depth: int = 2) -> Optional[FieldMeta]:
     if depth == 0:
         return None
 
-    field_meta = FieldMeta(name=node.name.value, depth=depth)
+    field_meta = FieldMeta(name=to_snake_case(node.name.value), depth=depth)
     if not node.selection_set:
         return field_meta
 
     depth -= 1
     for field_node in node.selection_set.selections:
         if isinstance(field_node, graphql.FragmentSpreadNode):
-            field_meta.fragments.add(field_node.name.value)
+            field_meta.fragments.add(to_snake_case(field_node.name.value))
             continue
 
         if not field_node.selection_set:
-            field_meta.sections.append(field_node.name.value)
+            field_meta.sections.append(to_snake_case(field_node.name.value))
             continue
 
         if depth == 0:
