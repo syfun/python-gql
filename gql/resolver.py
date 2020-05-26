@@ -17,7 +17,7 @@ from graphql import (
     is_union_type,
 )
 
-from .utils import execute_async_function, to_camel_case, to_snake_case
+from .utils import execute_async_function, recursive_to_snake_case, to_camel_case, to_snake_case
 
 FieldResolverMap = Dict[str, Dict[str, GraphQLFieldResolver]]
 TypeResolverMap = Dict[str, GraphQLTypeResolver]
@@ -40,7 +40,7 @@ def field_resolver(
     def wrap(func: GraphQLFieldResolver):
         @wraps(func)
         def _resolver(*args, **kwargs):
-            kwargs = {to_snake_case(k): v for k, v in kwargs.items()}
+            kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
                 return func(*args, **kwargs)
 
@@ -52,7 +52,7 @@ def field_resolver(
 
         @wraps(func)
         async def async_resolver(*args, **kwargs):
-            kwargs = {to_snake_case(k): v for k, v in kwargs.items()}
+            kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
                 return await execute_async_function(func, *args, **kwargs)
 

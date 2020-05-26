@@ -108,6 +108,7 @@ def fake_info(query) -> graphql.GraphQLResolveInfo:
 
     doc = graphql.parse(query)
     return MagicMock(
+        context={},
         field_nodes=doc.definitions[0].selection_set.selections,
         fragments={node.name.value: node for node in doc.definitions[1:]},
     )
