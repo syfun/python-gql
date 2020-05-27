@@ -110,7 +110,7 @@ def register_field_resolvers(schema: GraphQLSchema):
         for name, field_resolver in field_resolvers.items():
             field = type_.fields.get(name)
             if not field:
-                return
+                continue
             if type_name == 'Subscription':
                 field.subscribe = field_resolver
             else:
