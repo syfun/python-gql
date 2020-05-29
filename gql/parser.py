@@ -15,6 +15,7 @@ class FieldMeta:
     sections: List[str] = field(default_factory=list)
     sub_fields: Dict[str, 'FieldMeta'] = field(default_factory=dict)
     fragments: Set[str] = field(default_factory=set)
+    inline_fragments: Dict[str, 'FieldMeta'] = field(default_factory=dict)
 
     def get_sub_field(self, name) -> Optional['FieldMeta']:
         return self.sub_fields.get(name)
@@ -66,7 +67,11 @@ def parse_node(node: GraphQLNode, depth: int = 2) -> Optional[FieldMeta]:
     if depth == 0:
         return None
 
-    field_meta = FieldMeta(name=to_snake_case(node.name.value), depth=depth)
+    if isinstance(node, graphql.InlineFragmentNode):
+        name = node.type_condition.name.value
+    else:
+        name = to_snake_case(node.name.value)
+    field_meta = FieldMeta(name=name, depth=depth)
     if not node.selection_set:
         return field_meta
 
@@ -76,12 +81,20 @@ def parse_node(node: GraphQLNode, depth: int = 2) -> Optional[FieldMeta]:
             field_meta.fragments.add(to_snake_case(field_node.name.value))
             continue
 
+        if isinstance(field_node, graphql.InlineFragmentNode):
+            meta = parse_node(field_node, depth=depth + 1)
+            field_meta.inline_fragments[meta.name] = meta
+            continue
+
         if not field_node.selection_set:
-            field_meta.sections.append(to_snake_case(field_node.name.value))
+            name = field_node.name.value
+            if not name.startswith('__'):
+                field_meta.sections.append(to_snake_case(name))
             continue
 
         if depth == 0:
             continue
+
         field_meta.add_section_or_sub_field(parse_node(field_node, depth=depth))
 
     return field_meta
