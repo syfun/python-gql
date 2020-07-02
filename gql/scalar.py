@@ -89,12 +89,12 @@ class Timestamp:
     def parse_value(value: Any) -> datetime:
         if not is_integer(value):
             raise TypeError(f'Timestamp cannot represent non datetime value: {inspect(value)}')
-        return datetime.fromtimestamp(int(value) / 1000).replace(timezone.utc)
+        return datetime.utcfromtimestamp(int(value) / 1000).replace(tzinfo=timezone.utc)
 
     @staticmethod
     def parse_literal(ast, _variables=None):
         if isinstance(ast, IntValueNode):
-            return datetime.fromtimestamp(int(ast.value) / 1000).replace(timezone.utc)
+            return datetime.utcfromtimestamp(int(ast.value) / 1000).replace(tzinfo=timezone.utc)
 
         return INVALID
 
