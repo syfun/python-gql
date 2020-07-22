@@ -72,7 +72,7 @@ class Upload:
 
 @scalar_type
 class Timestamp:
-    description = "The `Timestamp` represents a millisecond unix timestamp."
+    description = "The `Timestamp` represents a millisecond unix timestamp with time zone."
 
     @staticmethod
     def serialize(value: Any) -> int:
@@ -105,7 +105,14 @@ class JSONString:
 
     @staticmethod
     def serialize(value: Any) -> str:
-        return json.dumps(value)
+        if isinstance(value, dict):
+            return json.dumps(value)
+
+        if isinstance(value, str):
+            return value
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        return str(value)
 
     @staticmethod
     def parse_value(value: Any) -> dict:
