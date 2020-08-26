@@ -15,7 +15,7 @@ Python 3.7+
 
 ```python
 import graphql
-from gql import gql, build_schema, query, mutate
+from gql import gql, make_schema, query, mutate
 
 type_defs = gql("""
 type Query {
@@ -42,7 +42,7 @@ def add_post(parent, info, author: str = None, comment: str = None) -> dict:
     return {'author': author, 'comment': comment}
 
 
-schema = build_schema(type_defs)
+schema = make_schema(type_defs)
 
 q = """
 query {
@@ -75,7 +75,7 @@ This library is `schema-first`, so you must build a schema explicitly.
 Here, we have two methods to build a schema, by `a type definitions` or `a schema file`.
 
 ```python
-from gql import gql, build_schema
+from gql import gql, make_schema
 
 type_defs = gql("""
 type Query {
@@ -83,15 +83,15 @@ type Query {
 }
 """)
 
-schema = build_schema(type_defs)
+schema = make_schema(type_defs)
 ```
 
 > `gql` function will check your type definitions syntax.
 
 ```python
-from gql import build_schema_from_file
+from gql import make_schema_from_file
 
-schema = build_schema_from_file('./schema.graphql')
+schema = make_schema_from_file('./schema.graphql')
 ```
 
 ## Resolver decorators
@@ -173,6 +173,14 @@ class JSONString:
 ```
 
 
+## Apollo Federation
+
+[Example](https://github.com/syfun/starlette-graphql/tree/master/examples/federation)
+
+[Apollo Federation](https://www.apollographql.com/docs/apollo-server/federation/introduction/)
+
+
 ## Framework support
 
 - [Starlette GraphQL](https://github.com/syfun/starlette-graphql)
+- [Django GraphQL](https://github.com/syfun/django-graphql)
