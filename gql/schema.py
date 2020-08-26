@@ -55,7 +55,7 @@ def make_schema_from_file(
     federation: bool = False,
 ) -> GraphQLSchema:
     with open(file, 'r') as f:
-        schema = build_schema(
+        schema = make_schema(
             f.read(),
             assume_valid,
             assume_valid_sdl,
