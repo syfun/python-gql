@@ -179,6 +179,8 @@ class JSONString:
 
 [Apollo Federation](https://www.apollographql.com/docs/apollo-server/federation/introduction/)
 
+Thanks to [Ariadne](https://ariadnegraphql.org/docs/apollo-federation)
+
 
 ## Framework support
 
