@@ -3,10 +3,11 @@ from collections import defaultdict
 from enum import Enum
 from functools import partial, wraps
 from inspect import iscoroutinefunction, isfunction
-from typing import Dict, Mapping, Union
+from typing import Any, Callable, Dict, Mapping, Union
 
 from graphql import (
     GraphQLFieldResolver,
+    GraphQLResolveInfo,
     GraphQLSchema,
     GraphQLTypeResolver,
     assert_interface_type,
@@ -19,11 +20,41 @@ from graphql import (
 
 from .utils import execute_async_function, recursive_to_snake_case, to_camel_case, to_snake_case
 
+ReferenceResolver = Callable[[Any, GraphQLResolveInfo, dict], Any]
 FieldResolverMap = Dict[str, Dict[str, GraphQLFieldResolver]]
 TypeResolverMap = Dict[str, GraphQLTypeResolver]
+ReferenceResolverMap = Dict[str, ReferenceResolver]
 
 field_resolver_map: FieldResolverMap = defaultdict(dict)
 type_resolver_map: TypeResolverMap = {}
+reference_resolver_map: ReferenceResolverMap = {}
+
+
+def reference_resolver(type_name: str):
+    def wrap(func: ReferenceResolver):
+        @wraps(func)
+        def sync_resolver(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as exc:
+                traceback.print_exc()
+                raise exc
+
+        @wraps(func)
+        async def async_resolver(*args, **kwargs):
+            try:
+                return await execute_async_function(func, *args, **kwargs)
+            except Exception as exc:
+                traceback.print_exc()
+                raise exc
+
+        if iscoroutinefunction(func):
+            reference_resolver_map[type_name] = async_resolver
+            return async_resolver
+        reference_resolver_map[type_name] = sync_resolver
+        return sync_resolver
+
+    return wrap
 
 
 def type_resolver(type_name: str):
@@ -39,7 +70,7 @@ def field_resolver(
 ):
     def wrap(func: GraphQLFieldResolver):
         @wraps(func)
-        def _resolver(*args, **kwargs):
+        def sync_resolver(*args, **kwargs):
             kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
                 return func(*args, **kwargs)
@@ -71,8 +102,8 @@ def field_resolver(
             field_resolver_map[type_name][name] = async_resolver
             return async_resolver
 
-        field_resolver_map[type_name][name] = _resolver
-        return _resolver
+        field_resolver_map[type_name][name] = sync_resolver
+        return sync_resolver
 
     if isfunction(func_or_field):
         return wrap(func_or_field)
@@ -83,6 +114,12 @@ def field_resolver(
 mutate = partial(field_resolver, 'Mutation')
 query = partial(field_resolver, 'Query')
 subscribe = partial(field_resolver, 'Subscription')
+
+
+def register_reference_resolvers(schema: GraphQLSchema):
+    for type_name, resolver in reference_resolver_map.items():
+        type_ = schema.get_type(type_name)
+        type_.__resolve_reference__ = resolver
 
 
 def register_type_resolvers(schema: GraphQLSchema):
@@ -120,6 +157,7 @@ def register_field_resolvers(schema: GraphQLSchema):
 def register_resolvers(schema: GraphQLSchema):
     register_field_resolvers(schema)
     register_type_resolvers(schema)
+    register_reference_resolvers(schema)
 
 
 def default_field_resolver(source, info, **args):

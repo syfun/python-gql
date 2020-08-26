@@ -1,7 +1,7 @@
 import re
 from functools import wraps
 from inspect import isawaitable
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from graphql import parse
 
@@ -120,3 +120,7 @@ async def execute_async_function(func, *args, **kwargs):
     if isawaitable(result):
         result = await result
     return result
+
+
+def join_type_defs(type_defs: List[str]) -> str:
+    return "\n\n".join(t.strip() for t in type_defs)
