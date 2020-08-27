@@ -15,6 +15,7 @@ from .federation import (
     federation_service_type_defs,
     get_entity_types,
     purge_schema_directives,
+    remove_subscription,
     resolve_entities,
 )
 from .resolver import register_resolvers
@@ -75,6 +76,9 @@ def make_federation_schema(
 ):
     # Remove custom schema directives (to avoid apollo-gateway crashes).
     sdl = purge_schema_directives(type_defs)
+
+    # remove subscription because Apollo Federation not support subscription yet.
+    sdl = remove_subscription(type_defs)
 
     type_defs = join_type_defs([type_defs, federation_service_type_defs])
     schema = build_schema(

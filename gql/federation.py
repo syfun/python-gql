@@ -76,6 +76,8 @@ _allowed_directives = [
     "extends",  # Federation directive.
 ]
 
+_r_subscription = re.compile("type\s+Subscription\s*{(.|\n)*}")  # noqa: W605
+
 
 def purge_schema_directives(joined_type_defs: str) -> str:
     """Remove custom schema directives from federation."""
@@ -84,6 +86,10 @@ def purge_schema_directives(joined_type_defs: str) -> str:
         lambda m: m.group(1) if m.group(2) in _allowed_directives else "", joined_type_defs,
     )
     return joined_type_defs
+
+
+def remove_subscription(joined_type_defs: str) -> str:
+    return _r_subscription.sub("", joined_type_defs)
 
 
 def gather_directives(type_object: GraphQLNamedType,) -> List[DirectiveNode]:
