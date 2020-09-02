@@ -66,12 +66,16 @@ def type_resolver(type_name: str):
 
 
 def field_resolver(
-    type_name: str, func_or_field: Union[GraphQLFieldResolver, str] = None, print_exc: bool = True
+    type_name: str,
+    func_or_field: Union[GraphQLFieldResolver, str] = None,
+    print_exc: bool = True,
+    snake_argument: bool = True,
 ):
     def wrap(func: GraphQLFieldResolver):
         @wraps(func)
         def sync_resolver(*args, **kwargs):
-            kwargs = recursive_to_snake_case(kwargs)
+            if snake_argument:
+                kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
                 return func(*args, **kwargs)
 
@@ -83,7 +87,8 @@ def field_resolver(
 
         @wraps(func)
         async def async_resolver(*args, **kwargs):
-            kwargs = recursive_to_snake_case(kwargs)
+            if snake_argument:
+                kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
                 return await execute_async_function(func, *args, **kwargs)
 
@@ -160,6 +165,12 @@ def register_resolvers(schema: GraphQLSchema):
     register_reference_resolvers(schema)
 
 
+def get_field_value(source, field_name):
+    return (
+        source.get(field_name) if isinstance(source, Mapping) else getattr(source, field_name, None)
+    )
+
+
 def default_field_resolver(source, info, **args):
     """Default field resolver.
 
@@ -172,10 +183,10 @@ def default_field_resolver(source, info, **args):
     used as attribute names.
     """
     # Ensure source is a value for which property access is acceptable.
-    field_name = to_snake_case(info.field_name)
-    value = (
-        source.get(field_name) if isinstance(source, Mapping) else getattr(source, field_name, None)
-    )
+    value = get_field_value(source, to_snake_case(info.field_name))
+    if value is None:
+        value = get_field_value(source, info.field_name)
+
     if callable(value):
         return value(info, **args)
     if isinstance(value, Enum):
