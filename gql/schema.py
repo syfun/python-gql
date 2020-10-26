@@ -1,4 +1,4 @@
-from typing import List, Union, cast
+from typing import Dict, List, Type, Union, cast
 
 from graphql import (
     GraphQLObjectType,
@@ -20,6 +20,7 @@ from .federation import (
 )
 from .resolver import register_resolvers
 from .scalar import register_scalars
+from .schema_visitor import SchemaDirectiveVisitor
 from .utils import join_type_defs
 
 
@@ -30,6 +31,7 @@ def make_schema(
     no_location: bool = False,
     experimental_fragment_variables: bool = False,
     federation: bool = False,
+    directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ) -> GraphQLSchema:
     if isinstance(type_defs, list):
         type_defs = join_type_defs(type_defs)
@@ -44,6 +46,9 @@ def make_schema(
     register_resolvers(schema)
     register_enums(schema)
     register_scalars(schema)
+
+    if directives:
+        SchemaDirectiveVisitor.visit_schema_directives(schema, directives)
     return schema
 
 
@@ -54,6 +59,7 @@ def make_schema_from_file(
     no_location: bool = False,
     experimental_fragment_variables: bool = False,
     federation: bool = False,
+    directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ) -> GraphQLSchema:
     with open(file, 'r') as f:
         schema = make_schema(
@@ -63,6 +69,7 @@ def make_schema_from_file(
             no_location,
             experimental_fragment_variables,
             federation,
+            directives,
         )
         return schema
 

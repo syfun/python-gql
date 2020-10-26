@@ -172,6 +172,36 @@ class JSONString:
 
 ```
 
+## Custom directive
+
+```python
+from gql import gql, make_schema, query, SchemaDirectiveVisitor
+from gql.resolver import default_field_resolver
+
+
+type_defs = gql("""
+directive @upper on FIELD_DEFINITION
+
+type Query {
+    hello(name: String!): String! @upper
+}
+""")
+
+class UpperDirective(SchemaDirectiveVisitor):
+    def visit_field_definition(self, field, object_type):
+        original_resolver = field.resolve or default_field_resolver
+
+        def resolve_upper(obj, info, **kwargs):
+            result = original_resolver(obj, info, **kwargs)
+            if result is None:
+                return None
+            return result.upper()
+
+        field.resolve = resolve_upper
+        return field
+
+schema = make_schema(type_defs, directives={'upper': UpperDirective})
+```
 
 ## Apollo Federation
 
