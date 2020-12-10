@@ -13,3 +13,5 @@ from .scalar import scalar_type  # noqa
 from .schema import make_schema, make_schema_from_file  # noqa
 from .schema_visitor import SchemaDirectiveVisitor  # noqa
 from .utils import gql  # noqa
+
+__version__ = '0.2.1'
