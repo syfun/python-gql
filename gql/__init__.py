@@ -1,6 +1,7 @@
 from .enum import enum_type  # noqa
 from .execute import ExecutionContext  # noqa
 from .middleware import MiddlewareManager  # noqa
+from .parser import parse_info, FieldMeta, parse_node  # noqa
 from .resolver import (  # noqa
     field_resolver,
     mutate,
@@ -14,4 +15,4 @@ from .schema import make_schema, make_schema_from_file  # noqa
 from .schema_visitor import SchemaDirectiveVisitor  # noqa
 from .utils import gql  # noqa
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'

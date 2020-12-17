@@ -35,7 +35,8 @@ def reference_resolver(type_name: str):
         @wraps(func)
         def sync_resolver(*args, **kwargs):
             try:
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                return dict(result) if result is not None else result
             except Exception as exc:
                 traceback.print_exc()
                 raise exc
@@ -43,7 +44,8 @@ def reference_resolver(type_name: str):
         @wraps(func)
         async def async_resolver(*args, **kwargs):
             try:
-                return await execute_async_function(func, *args, **kwargs)
+                result = await execute_async_function(func, *args, **kwargs)
+                return dict(result) if result is not None else result
             except Exception as exc:
                 traceback.print_exc()
                 raise exc
