@@ -74,6 +74,42 @@ def make_schema_from_file(
         return schema
 
 
+def parse_from_file(file: str):
+    with open(file, 'r') as f:
+        return parse(f.read())
+
+
+base_type_def = """
+type Query
+type Mutation
+"""
+
+
+def make_schema_from_files(
+    files: List[str],
+    assume_valid: bool = False,
+    assume_valid_sdl: bool = False,
+    no_location: bool = False,
+    experimental_fragment_variables: bool = False,
+    federation: bool = False,
+    directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
+):
+    if not files:
+        return None
+    schema = make_schema(
+        base_type_def,
+        assume_valid=assume_valid,
+        assume_valid_sdl=assume_valid_sdl,
+        no_location=no_location,
+        experimental_fragment_variables=experimental_fragment_variables,
+        federation=federation,
+        directives=directives,
+    )
+    for file in files:
+        schema = extend_schema(schema, parse_from_file(file))
+    return schema
+
+
 def make_federation_schema(
     type_defs: str,
     assume_valid: bool = False,

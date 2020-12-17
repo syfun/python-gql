@@ -1,0 +1,12 @@
+type Address {
+    id: ID!
+    name: String!
+}
+
+extend type Query {
+    addresses: [Address!]!
+}
+
+extend type Mutation {
+    createAddress(name: String!): Address!
+}
