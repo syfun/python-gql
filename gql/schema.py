@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List, Type, Union, cast
 
 from graphql import (
@@ -36,12 +37,22 @@ def make_schema(
     if isinstance(type_defs, list):
         type_defs = join_type_defs(type_defs)
 
-    if not federation:
+    if federation:
+        # Remove custom schema directives (to avoid apollo-gateway crashes).
+        sdl = purge_schema_directives(type_defs)
+
+        # remove subscription because Apollo Federation not support subscription yet.
+        sdl = remove_subscription(type_defs)
+
+        type_defs = join_type_defs([type_defs, federation_service_type_defs])
         schema = build_schema(
             type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
         )
+        fix_federation_schema(schema)
     else:
-        schema = make_federation_schema(type_defs)
+        schema = build_schema(
+            type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
+        )
 
     register_resolvers(schema)
     register_enums(schema)
@@ -74,19 +85,21 @@ def make_schema_from_file(
         return schema
 
 
-def parse_from_file(file: str):
-    with open(file, 'r') as f:
-        return parse(f.read())
+def parse_from_file(file: Path):
+    with file.open('r') as f:
+        type_defs = f.read()
+        parse(type_defs)
+        return type_defs
 
 
-base_type_def = """
+base_type_defs = """
 type Query
 type Mutation
 """
 
 
-def make_schema_from_files(
-    files: List[str],
+def make_schema_from_path(
+    path: str,
     assume_valid: bool = False,
     assume_valid_sdl: bool = False,
     no_location: bool = False,
@@ -94,39 +107,28 @@ def make_schema_from_files(
     federation: bool = False,
     directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ):
-    if not files:
-        return None
-    schema = make_schema(
-        base_type_def,
-        assume_valid=assume_valid,
-        assume_valid_sdl=assume_valid_sdl,
-        no_location=no_location,
-        experimental_fragment_variables=experimental_fragment_variables,
-        federation=federation,
-        directives=directives,
+    p = Path(path)
+    if p.is_file():
+        type_defs = parse_from_file(p)
+    elif p.is_dir():
+        type_defs = [base_type_defs]
+        for file in p.glob('*.graphql'):
+            type_defs.extend([parse_from_file(file)])
+    else:
+        raise RuntimeError('path: expect a file or directory!')
+
+    return make_schema(
+        type_defs,
+        assume_valid,
+        assume_valid_sdl,
+        no_location,
+        experimental_fragment_variables,
+        federation,
+        directives,
     )
-    for file in files:
-        schema = extend_schema(schema, parse_from_file(file))
-    return schema
 
 
-def make_federation_schema(
-    type_defs: str,
-    assume_valid: bool = False,
-    assume_valid_sdl: bool = False,
-    no_location: bool = False,
-    experimental_fragment_variables: bool = False,
-):
-    # Remove custom schema directives (to avoid apollo-gateway crashes).
-    sdl = purge_schema_directives(type_defs)
-
-    # remove subscription because Apollo Federation not support subscription yet.
-    sdl = remove_subscription(type_defs)
-
-    type_defs = join_type_defs([type_defs, federation_service_type_defs])
-    schema = build_schema(
-        type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
-    )
+def fix_federation_schema(schema: GraphQLSchema):
     entity_types = get_entity_types(schema)
     if entity_types:
         schema = extend_schema(schema, parse(federation_entity_type_defs))
@@ -147,5 +149,3 @@ def make_federation_schema(
     if query_type:
         query_type = cast(GraphQLObjectType, query_type)
         query_type.fields["_service"].resolve = lambda _service, info: {"sdl": sdl}
-
-    return schema

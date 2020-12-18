@@ -11,7 +11,7 @@ from .resolver import (  # noqa
     type_resolver,
 )
 from .scalar import scalar_type  # noqa
-from .schema import make_schema, make_schema_from_file, make_schema_from_files  # noqa
+from .schema import make_schema, make_schema_from_file, make_schema_from_path  # noqa
 from .schema_visitor import SchemaDirectiveVisitor  # noqa
 from .utils import gql  # noqa
 
