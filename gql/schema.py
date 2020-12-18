@@ -42,13 +42,32 @@ def make_schema(
         sdl = purge_schema_directives(type_defs)
 
         # remove subscription because Apollo Federation not support subscription yet.
-        sdl = remove_subscription(type_defs)
+        # type_defs = remove_subscription(type_defs)
 
         type_defs = join_type_defs([type_defs, federation_service_type_defs])
         schema = build_schema(
             type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
         )
-        fix_federation_schema(schema)
+        entity_types = get_entity_types(schema)
+        if entity_types:
+            schema = extend_schema(schema, parse(federation_entity_type_defs))
+
+            # Add _entities query.
+            entity_type = schema.get_type("_Entity")
+            if entity_type:
+                entity_type = cast(GraphQLUnionType, entity_type)
+                entity_type.types = entity_types
+
+            query_type = schema.get_type("Query")
+            if query_type:
+                query_type = cast(GraphQLObjectType, query_type)
+                query_type.fields["_entities"].resolve = resolve_entities
+
+        # Add _service query.
+        query_type = schema.get_type("Query")
+        if query_type:
+            query_type = cast(GraphQLObjectType, query_type)
+            query_type.fields["_service"].resolve = lambda _service, info: {"sdl": sdl}
     else:
         schema = build_schema(
             type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
@@ -126,26 +145,3 @@ def make_schema_from_path(
         federation,
         directives,
     )
-
-
-def fix_federation_schema(schema: GraphQLSchema):
-    entity_types = get_entity_types(schema)
-    if entity_types:
-        schema = extend_schema(schema, parse(federation_entity_type_defs))
-
-        # Add _entities query.
-        entity_type = schema.get_type("_Entity")
-        if entity_type:
-            entity_type = cast(GraphQLUnionType, entity_type)
-            entity_type.types = entity_types
-
-        query_type = schema.get_type("Query")
-        if query_type:
-            query_type = cast(GraphQLObjectType, query_type)
-            query_type.fields["_entities"].resolve = resolve_entities
-
-    # Add _service query.
-    query_type = schema.get_type("Query")
-    if query_type:
-        query_type = cast(GraphQLObjectType, query_type)
-        query_type.fields["_service"].resolve = lambda _service, info: {"sdl": sdl}
