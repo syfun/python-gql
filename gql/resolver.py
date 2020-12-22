@@ -31,6 +31,12 @@ reference_resolver_map: ReferenceResolverMap = {}
 
 
 def reference_resolver(type_name: str):
+    if type_name in reference_resolver_map:
+        raise Exception(
+            f"{type_name} is already registered by "
+            f"{reference_resolver_map[type_name].__code__}"
+        )
+
     def wrap(func: ReferenceResolver):
         @wraps(func)
         def sync_resolver(*args, **kwargs):
@@ -60,6 +66,12 @@ def reference_resolver(type_name: str):
 
 
 def type_resolver(type_name: str):
+    if type_name in type_resolver_map:
+        raise Exception(
+            f"{type_name} is already registered by "
+            f"{type_resolver_map[type_name].__code__}"
+        )
+
     def wrap(func):
         type_resolver_map[type_name] = func
         return func
@@ -104,6 +116,12 @@ def field_resolver(
             name = to_camel_case(func_or_field or func.__name__)
         else:
             name = to_camel_case(func.__name__)
+
+        if type_name in field_resolver_map and name in field_resolver_map[type_name]:
+            raise Exception(
+                f"{type_name}.{name} is already registered by "
+                f"{field_resolver_map[type_name][name].__code__}"
+            )
 
         if iscoroutinefunction(func):
             field_resolver_map[type_name][name] = async_resolver
