@@ -106,7 +106,7 @@ class JSONString:
     @staticmethod
     def serialize(value: Any) -> str:
         if isinstance(value, (dict, list, tuple)):
-            return json.dumps(value)
+            return json.dumps(value, ensure_ascii=False)
 
         if isinstance(value, str):
             return value
