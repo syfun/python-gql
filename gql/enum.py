@@ -32,5 +32,7 @@ def register_enums(schema: GraphQLSchema):
 
         type_ = assert_enum_type(type_)
         _enum_type = enum_type_map.get(type_name)
-        if _enum_type:
-            type_.values = {value.name: GraphQLEnumValue(value.name) for value in _enum_type}
+        if not _enum_type:
+            type_.values = {value: GraphQLEnumValue(value) for value in type_.values}
+        else:
+            type_.values = {value.name: GraphQLEnumValue(value.value) for value in _enum_type}

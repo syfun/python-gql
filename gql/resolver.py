@@ -210,5 +210,5 @@ def default_field_resolver(source, info, **args):
     if callable(value):
         return value(info, **args)
     if isinstance(value, Enum):
-        return value.name
+        return value.value
     return value
