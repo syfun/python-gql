@@ -1,14 +1,17 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import graphql
+from graphql import located_error
 from graphql.execution.execute import get_field_def
-from graphql.execution.values import get_variable_values
+from graphql.execution.values import get_argument_values, get_variable_values
+
 from graphql.pyutils import AwaitableOrValue, FrozenList, Path, Undefined, inspect
 
 from .middleware import MiddlewareManager
 
 
 class ExecutionContext(graphql.ExecutionContext):
+    # custom Middleware Manager
     middleware_manager: MiddlewareManager
 
     @classmethod
@@ -114,6 +117,7 @@ class ExecutionContext(graphql.ExecutionContext):
         if not field_def:
             return Undefined
 
+        return_type = field_def.type
         resolve_fn = field_def.resolve or self.field_resolver
 
         if self.middleware_manager:
@@ -125,6 +129,48 @@ class ExecutionContext(graphql.ExecutionContext):
 
         # Get the resolve function, regardless of if its result is normal or abrupt
         # (error).
-        result = self.resolve_field_value_or_error(field_def, field_nodes, resolve_fn, source, info)
+        try:
+            # Build a dictionary of arguments from the field.arguments AST, using the
+            # variables scope to fulfill any variable references.
+            args = get_argument_values(field_def, field_nodes[0], self.variable_values)
 
-        return self.complete_value_catching_error(field_def.type, field_nodes, info, path, result)
+            # Note that contrary to the JavaScript implementation, we pass the context
+            # value as part of the resolve info.
+            result = resolve_fn(source, info, **args)
+
+            completed: AwaitableOrValue[Any]
+            if self.is_awaitable(result):
+                # noinspection PyShadowingNames
+                async def await_result() -> Any:
+                    try:
+                        completed = self.complete_value(
+                            return_type, field_nodes, info, path, await result
+                        )
+                        if self.is_awaitable(completed):
+                            return await completed
+                        return completed
+                    except Exception as raw_error:
+                        error = located_error(raw_error, field_nodes, path.as_list())
+                        self.handle_field_error(error, return_type)
+                        return None
+
+                return await_result()
+
+            completed = self.complete_value(return_type, field_nodes, info, path, result)
+            if self.is_awaitable(completed):
+                # noinspection PyShadowingNames
+                async def await_completed() -> Any:
+                    try:
+                        return await completed
+                    except Exception as raw_error:
+                        error = located_error(raw_error, field_nodes, path.as_list())
+                        self.handle_field_error(error, return_type)
+                        return None
+
+                return await_completed()
+
+            return completed
+        except Exception as raw_error:
+            error = located_error(raw_error, field_nodes, path.as_list())
+            self.handle_field_error(error, return_type)
+            return None
