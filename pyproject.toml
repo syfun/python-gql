@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "python-gql"
-version = "0.2.5"
+version = "0.2.6"
 description = "Python schema-first GraphQL library based on GraphQL-core"
 authors = ["ysun <sunyu418@gmail.com>"]
 license = "MIT"
