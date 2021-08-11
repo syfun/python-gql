@@ -115,12 +115,6 @@ def parse_from_file(file: Path):
         return type_defs
 
 
-base_type_defs = """
-type Query
-type Mutation
-"""
-
-
 def make_schema_from_path(
     path: str,
     assume_valid: bool = False,
@@ -135,7 +129,7 @@ def make_schema_from_path(
     if p.is_file():
         type_defs = parse_from_file(p)
     elif p.is_dir():
-        type_defs = [base_type_defs]
+        type_defs = []
         for file in p.glob('*.graphql'):
             type_defs.extend([parse_from_file(file)])
     else:
