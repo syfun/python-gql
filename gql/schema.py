@@ -32,6 +32,7 @@ def make_schema(
     no_location: bool = False,
     experimental_fragment_variables: bool = False,
     federation: bool = False,
+    add_federation_defs: bool = True,
     directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ) -> GraphQLSchema:
     if isinstance(type_defs, list):
@@ -44,7 +45,8 @@ def make_schema(
         # remove subscription because Apollo Federation not support subscription yet.
         # type_defs = remove_subscription(type_defs)
 
-        type_defs = join_type_defs([type_defs, federation_service_type_defs])
+        if add_federation_defs:
+            type_defs = join_type_defs([type_defs, federation_service_type_defs])
         schema = build_schema(
             type_defs, assume_valid, assume_valid_sdl, no_location, experimental_fragment_variables
         )
@@ -89,6 +91,7 @@ def make_schema_from_file(
     no_location: bool = False,
     experimental_fragment_variables: bool = False,
     federation: bool = False,
+    add_federation_defs: bool = True,
     directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ) -> GraphQLSchema:
     with open(file, 'r') as f:
@@ -99,6 +102,7 @@ def make_schema_from_file(
             no_location,
             experimental_fragment_variables,
             federation,
+            add_federation_defs,
             directives,
         )
         return schema
@@ -124,6 +128,7 @@ def make_schema_from_path(
     no_location: bool = False,
     experimental_fragment_variables: bool = False,
     federation: bool = False,
+    add_federation_defs: bool = True,
     directives: Dict[str, Type[SchemaDirectiveVisitor]] = None,
 ):
     p = Path(path)
@@ -143,5 +148,6 @@ def make_schema_from_path(
         no_location,
         experimental_fragment_variables,
         federation,
+        add_federation_defs,
         directives,
     )
