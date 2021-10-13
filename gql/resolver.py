@@ -1,3 +1,5 @@
+import json
+import logging
 import traceback
 from collections import defaultdict
 from enum import Enum
@@ -20,6 +22,9 @@ from graphql import (
 
 from .utils import execute_async_function, recursive_to_snake_case, to_camel_case, to_snake_case
 
+
+logger = logging.getLogger(__name__)
+
 ReferenceResolver = Callable[[Any, GraphQLResolveInfo, dict], Any]
 FieldResolverMap = Dict[str, Dict[str, GraphQLFieldResolver]]
 TypeResolverMap = Dict[str, GraphQLTypeResolver]
@@ -28,6 +33,13 @@ ReferenceResolverMap = Dict[str, ReferenceResolver]
 field_resolver_map: FieldResolverMap = defaultdict(dict)
 type_resolver_map: TypeResolverMap = {}
 reference_resolver_map: ReferenceResolverMap = {}
+
+
+def print_resolver_error(info: GraphQLResolveInfo):
+    logger.error(
+        f'Failed execute "{info.parent_type.name}.{info.field_name}" resolver. '
+        f'Variables: {json.dumps(info.variable_values)}.'
+    )
 
 
 def reference_resolver(type_name: str):
@@ -39,20 +51,22 @@ def reference_resolver(type_name: str):
 
     def wrap(func: ReferenceResolver):
         @wraps(func)
-        def sync_resolver(*args, **kwargs):
+        def sync_resolver(parent, info, **kwargs):
             try:
-                result = func(*args, **kwargs)
+                result = func(parent, info, **kwargs)
                 return dict(result) if result is not None else result
             except Exception as exc:
+                print_resolver_error(info)
                 traceback.print_exc()
                 raise exc
 
         @wraps(func)
-        async def async_resolver(*args, **kwargs):
+        async def async_resolver(parent, info, **kwargs):
             try:
-                result = await execute_async_function(func, *args, **kwargs)
+                result = await execute_async_function(func, parent, info, **kwargs)
                 return dict(result) if result is not None else result
             except Exception as exc:
+                print_resolver_error(info)
                 traceback.print_exc()
                 raise exc
 
@@ -87,28 +101,30 @@ def field_resolver(
 ):
     def wrap(func: GraphQLFieldResolver):
         @wraps(func)
-        def sync_resolver(*args, **kwargs):
+        def sync_resolver(parent, info, **kwargs):
             if snake_argument:
                 kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
-                return func(*args, **kwargs)
+                return func(parent, info, **kwargs)
 
             try:
-                return func(*args, **kwargs)
+                return func(parent, info, **kwargs)
             except Exception as exc:
+                print_resolver_error(info)
                 traceback.print_exc()
                 raise exc
 
         @wraps(func)
-        async def async_resolver(*args, **kwargs):
+        async def async_resolver(parent, info, **kwargs):
             if snake_argument:
                 kwargs = recursive_to_snake_case(kwargs)
             if not print_exc:
-                return await execute_async_function(func, *args, **kwargs)
+                return await execute_async_function(func, parent, info, **kwargs)
 
             try:
-                return await execute_async_function(func, *args, **kwargs)
+                return await execute_async_function(func, parent, info, **kwargs)
             except Exception as exc:
+                print_resolver_error(info)
                 traceback.print_exc()
                 raise exc
 
