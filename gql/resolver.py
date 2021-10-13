@@ -1,4 +1,3 @@
-import json
 import logging
 import traceback
 from collections import defaultdict
@@ -38,7 +37,7 @@ reference_resolver_map: ReferenceResolverMap = {}
 def print_resolver_error(info: GraphQLResolveInfo):
     logger.error(
         f'Failed execute "{info.parent_type.name}.{info.field_name}" resolver. '
-        f'Variables: {json.dumps(info.variable_values)}.'
+        f'Variables: {info.variable_values}.'
     )
 
 
