@@ -50,9 +50,9 @@ def reference_resolver(type_name: str):
 
     def wrap(func: ReferenceResolver):
         @wraps(func)
-        def sync_resolver(parent, info, **kwargs):
+        def sync_resolver(parent, info, representation):
             try:
-                result = func(parent, info, **kwargs)
+                result = func(parent, info, representation)
                 return dict(result) if result is not None else result
             except Exception as exc:
                 print_resolver_error(info)
@@ -60,9 +60,9 @@ def reference_resolver(type_name: str):
                 raise exc
 
         @wraps(func)
-        async def async_resolver(parent, info, **kwargs):
+        async def async_resolver(parent, info, representation):
             try:
-                result = await execute_async_function(func, parent, info, **kwargs)
+                result = await execute_async_function(func, parent, info, representation)
                 return dict(result) if result is not None else result
             except Exception as exc:
                 print_resolver_error(info)
