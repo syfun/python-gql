@@ -15,4 +15,4 @@ from .schema import make_schema, make_schema_from_file, make_schema_from_path  #
 from .schema_visitor import SchemaDirectiveVisitor  # noqa
 from .utils import gql  # noqa
 
-__version__ = '0.2.9'
+__version__ = '0.2.10'
