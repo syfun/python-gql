@@ -1,3 +1,4 @@
+import inspect
 import logging
 import traceback
 from collections import defaultdict
@@ -19,6 +20,7 @@ from graphql import (
     is_union_type,
 )
 
+from .depends import ResolverDepends
 from .utils import execute_async_function, recursive_to_snake_case, to_camel_case, to_snake_case
 
 
@@ -44,15 +46,18 @@ def print_resolver_error(info: GraphQLResolveInfo):
 def reference_resolver(type_name: str):
     if type_name in reference_resolver_map:
         raise Exception(
-            f"{type_name} is already registered by "
-            f"{reference_resolver_map[type_name].__code__}"
+            f"{type_name} is already registered by " f"{reference_resolver_map[type_name].__code__}"
         )
 
     def wrap(func: ReferenceResolver):
         @wraps(func)
         def sync_resolver(parent, info, representation):
             try:
-                result = func(parent, info, representation)
+                kwargs = {}
+                for name, param in inspect.signature(func).parameters.items():
+                    if isinstance(param.default, ResolverDepends):
+                        kwargs[name] = param.default.execute(parent, info)
+                result = func(parent, info, representation, **kwargs)
                 return dict(result) if result is not None else result
             except Exception as exc:
                 print_resolver_error(info)
@@ -62,7 +67,11 @@ def reference_resolver(type_name: str):
         @wraps(func)
         async def async_resolver(parent, info, representation):
             try:
-                result = await execute_async_function(func, parent, info, representation)
+                kwargs = {}
+                for name, param in inspect.signature(func).parameters.items():
+                    if isinstance(param.default, ResolverDepends):
+                        kwargs[name] = param.default.execute(parent, info)
+                result = await execute_async_function(func, parent, info, representation, **kwargs)
                 return dict(result) if result is not None else result
             except Exception as exc:
                 print_resolver_error(info)
@@ -81,8 +90,7 @@ def reference_resolver(type_name: str):
 def type_resolver(type_name: str):
     if type_name in type_resolver_map:
         raise Exception(
-            f"{type_name} is already registered by "
-            f"{type_resolver_map[type_name].__code__}"
+            f"{type_name} is already registered by " f"{type_resolver_map[type_name].__code__}"
         )
 
     def wrap(func):
@@ -103,6 +111,11 @@ def field_resolver(
         def sync_resolver(parent, info, **kwargs):
             if snake_argument:
                 kwargs = recursive_to_snake_case(kwargs)
+
+            for name, param in inspect.signature(func).parameters.items():
+                if isinstance(param.default, ResolverDepends):
+                    kwargs[name] = param.default.execute(parent, info)
+
             if not print_exc:
                 return func(parent, info, **kwargs)
 
@@ -117,6 +130,11 @@ def field_resolver(
         async def async_resolver(parent, info, **kwargs):
             if snake_argument:
                 kwargs = recursive_to_snake_case(kwargs)
+
+            for name, param in inspect.signature(func).parameters.items():
+                if isinstance(param.default, ResolverDepends):
+                    kwargs[name] = param.default.execute(parent, info)
+
             if not print_exc:
                 return await execute_async_function(func, parent, info, **kwargs)
 

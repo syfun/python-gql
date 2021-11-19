@@ -1,3 +1,6 @@
+"""
+Python schema-first GraphQL library based on GraphQL-core.
+"""
 from .enum import enum_type  # noqa
 from .execute import ExecutionContext  # noqa
 from .middleware import MiddlewareManager  # noqa
@@ -15,4 +18,4 @@ from .schema import make_schema, make_schema_from_file, make_schema_from_path  #
 from .schema_visitor import SchemaDirectiveVisitor  # noqa
 from .utils import gql  # noqa
 
-__version__ = '0.2.10'
+__version__ = '0.3.0'
