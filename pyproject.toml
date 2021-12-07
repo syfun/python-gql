@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "gql"
+name = "python-gql"
 authors = [
     {name = "YuSUN", email = "y.sun@teletraan.io"},
 ]
@@ -30,6 +30,9 @@ dev = [
     "pre-commit ==2.13.0",
     "pytest ==6.2.4",
 ]
+
+[tool.flit.module]
+name = "gql"
 
 [tool.black]
 line-length = 100
